@@ -5,7 +5,7 @@ import { addSurveyMilestone, uploadSurveyReport } from "../../api/survey";
 
 const milestones = ["visit_scheduled", "arrived_on_site", "survey_started", "survey_completed"];
 
-export default function TaskExecution({ applicationId = "" }) {
+export default function TaskExecution({ applicationId = "", user }) {
   const [id, setId] = useState(applicationId);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -30,11 +30,11 @@ export default function TaskExecution({ applicationId = "" }) {
       <Message error={error}>{message}</Message>
       <div className="panel-actions">
         {milestones.map((milestone) => (
-          <button key={milestone} onClick={() => run(() => addSurveyMilestone(id, { milestone, by: "SURV-RM-04" }), `${milestone} saved.`)}>
+          <button key={milestone} onClick={() => run(() => addSurveyMilestone(id, { milestone, by: user?.actor_id || "surveyor" }), `${milestone} saved.`)}>
             {milestone}
           </button>
         ))}
-        <button className="primary" onClick={() => run(() => uploadSurveyReport(id, { report_title: "Field survey report", surveyor_id: "SURV-RM-04", findings: "Boundary verified.", field_notes: ["GPS points captured"] }), "Report uploaded.")}>
+        <button className="primary" onClick={() => run(() => uploadSurveyReport(id, { report_title: "Field survey report", surveyor_id: user?.actor_id || "surveyor", findings: "Boundary verified.", field_notes: ["GPS points captured"] }), "Report uploaded.")}>
           report_uploaded
         </button>
       </div>

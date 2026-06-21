@@ -8,6 +8,7 @@ This repository is aligned with the project PDF requirements and uses:
 - Frontend: React + Vite
 - Map: OpenStreetMap + Leaflet
 - Database: MongoDB
+- Notifications: Mongo outbox fanout with optional SMTP email delivery
 
 ## Required Workflow
 
@@ -67,15 +68,42 @@ npm install
 npm run dev
 ```
 
-## Sample Staff Header
+## Demo Login Accounts
 
-Staff-only endpoints use a simple role header:
+Use the login page or `POST /auth/login`.
+
+| Role | Email | Password |
+|---|---|---|
+| applicant | `applicant@lrmis-demo.ps` | `applicant123` |
+| surveyor | `surveyor@lrmis-demo.ps` | `surveyor123` |
+| registrar | `registrar@lrmis-demo.ps` | `registrar123` |
+| supervisor | `supervisor@lrmis-demo.ps` | `supervisor123` |
+| admin | `admin@lrmis-demo.ps` | `admin123` |
+
+Authenticated requests use:
 
 ```text
-X-LRMIS-Role: staff
-X-LRMIS-Role: surveyor
-X-LRMIS-Role: registrar
+Authorization: Bearer <token>
 ```
+
+## Email Notifications
+
+Workflow changes publish notification events and fan out email messages into MongoDB. Real SMTP delivery is off by default. To enable Gmail SMTP locally, set these values in `backend/.env` and do not commit that file:
+
+```env
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-account@example.com
+SMTP_PASSWORD=your-gmail-app-password
+SMTP_USE_TLS=true
+MAIL_FROM=your-account@example.com
+MAIL_FROM_NAME=LRMIS
+REPLY_TO=your-account@example.com
+EMAIL_REDIRECT_TO=your-account@example.com
+```
+
+The admin panel can send a test email and view notification delivery status.
 
 ## Main Endpoints
 
@@ -115,6 +143,9 @@ Analytics and map:
 - `GET /analytics/registrars`
 - `GET /analytics/geofeeds/parcels`
 - `GET /analytics/geofeeds/pending-heatmap`
+- `GET /admin/notification-events`
+- `GET /admin/notification-messages`
+- `POST /admin/test-email`
 
 ## MongoDB Collections
 
@@ -128,6 +159,10 @@ Analytics and map:
 - `survey_reports`
 - `certificates`
 - `performance_logs`
+- `users`
+- `system_events`
+- `notification_events`
+- `notification_messages`
 
 Indexes are created automatically at FastAPI startup from `backend/app/db/indexes.py`.
 
@@ -181,5 +216,5 @@ cd ..\lrmis\backend
 pytest
 ```
 
-The tests cover applicant creation, idempotency, document metadata, workflow guards, survey assignment, survey milestones, registrar review, certificate guard behavior, and analytics responses.
+The tests cover workflow guards, survey assignment, survey milestones, registrar review, JWT authentication, password hashing, and notification fanout.
 

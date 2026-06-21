@@ -9,7 +9,7 @@ const defaultGeometry = {
   coordinates: [[[35.2001, 31.9021], [35.2015, 31.9021], [35.2015, 31.903], [35.2001, 31.903], [35.2001, 31.9021]]]
 };
 
-export default function SubmitApplication({ onCreated }) {
+export default function SubmitApplication({ user, onCreated }) {
   const [form, setForm] = useState({
     full_name: "Nour Ahmad",
     national_id: "400000000",
@@ -44,7 +44,7 @@ export default function SubmitApplication({ onCreated }) {
       const payload = {
         application_type: form.application_type,
         applicant_ref: {
-          applicant_id: applicant.applicant_id,
+          applicant_id: user?.actor_id || applicant.applicant_id,
           applicant_type: form.applicant_type,
           submitted_by_representative: false
         },

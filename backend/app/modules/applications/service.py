@@ -17,6 +17,7 @@ from app.modules.applications.models import (
 )
 from app.modules.applications.repository import ApplicationRepository
 from app.modules.audit.service import AuditService
+from app.modules.notifications.service import NotificationService
 from app.shared.enums import ApplicationType
 from app.shared.ids import next_yearly_id, utc_now
 
@@ -50,10 +51,12 @@ class ApplicationService:
         repo: ApplicationRepository | None = None,
         applicant_repo: ApplicantRepository | None = None,
         audit: AuditService | None = None,
+        notifications: NotificationService | None = None,
     ) -> None:
         self.repo = repo or ApplicationRepository()
         self.applicant_repo = applicant_repo or ApplicantRepository(self.repo.db)
         self.audit = audit or AuditService()
+        self.notifications = notifications or NotificationService(self.repo.db)
 
     def _parcel_code(self, parcel_ref: dict) -> str:
         if parcel_ref.get("parcel_code"):
@@ -140,6 +143,7 @@ class ApplicationService:
         created = self.repo.create(doc)
         self.applicant_repo.add_application(payload.applicant_ref.applicant_id, application_id)
         self.audit.record(application_id, "submitted", "applicant", payload.applicant_ref.applicant_id, {"channel": "web"})
+        self.notifications.application_submitted(created)
         return created
 
     def list(self, **kwargs) -> tuple[list[dict], int]:
@@ -320,6 +324,8 @@ class ApplicationService:
             push = {f"{target}_history": {"reason": reason, "by": performed_by, "at": now}}
         updated = self.repo.update(app["application_id"], update, push)
         self.audit.record(app["application_id"], "status_changed", "staff", performed_by, {"from": app["status"], "to": target, "reason": reason})
+        if updated:
+            self.notifications.application_status_changed(updated, app["status"], target, reason)
         return updated
 
     def _require_complete_applicant_and_parcel(self, app: dict) -> None:

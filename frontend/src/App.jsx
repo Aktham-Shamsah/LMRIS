@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { BarChart3, ClipboardList, FileCheck2, FilePlus2, Home, Map, Search, ShieldCheck, UserRound, UsersRound } from "lucide-react";
+﻿import { useMemo, useState } from "react";
+import { BarChart3, ClipboardList, FileCheck2, FilePlus2, Home, LogOut, Map, Search, Settings, ShieldCheck, UsersRound } from "lucide-react";
 import NavButton from "./components/NavButton";
 import LoginPage from "./pages/LoginPage";
 import ApplicantDashboard from "./pages/applicant/Dashboard";
@@ -14,42 +14,45 @@ import RegistrarReview from "./pages/registrar/RegistrarReview";
 import CertificateView from "./pages/registrar/CertificateView";
 import AnalyticsDashboard from "./pages/analytics/Dashboard";
 import LiveMap from "./pages/map/LiveMap";
+import AdminPanel from "./pages/admin/AdminPanel";
 
 const navItems = [
-  { id: "login", label: "User Selection", icon: UserRound },
-  { id: "applicant-dashboard", label: "Applicant Dashboard", icon: Home },
-  { id: "submit", label: "Submit Application", icon: FilePlus2 },
-  { id: "track", label: "Track Application", icon: Search },
-  { id: "staff-dashboard", label: "Staff Dashboard", icon: ShieldCheck },
-  { id: "manage", label: "Application Management", icon: ClipboardList },
-  { id: "details", label: "Application Details", icon: FileCheck2 },
-  { id: "tasks", label: "Surveyor Tasks", icon: UsersRound },
-  { id: "execute", label: "Task Execution", icon: ClipboardList },
-  { id: "registrar-review", label: "Registrar Review", icon: ShieldCheck },
-  { id: "map", label: "Live Map", icon: Map },
-  { id: "analytics", label: "Analytics", icon: BarChart3 },
-  { id: "certificate", label: "Certificate View", icon: FileCheck2 }
+  { id: "applicant-dashboard", label: "Applicant Dashboard", icon: Home, roles: ["applicant"] },
+  { id: "submit", label: "Submit Application", icon: FilePlus2, roles: ["applicant"] },
+  { id: "track", label: "Track Application", icon: Search, roles: ["applicant"] },
+  { id: "staff-dashboard", label: "Staff Dashboard", icon: ShieldCheck, roles: ["supervisor", "admin"] },
+  { id: "manage", label: "Application Management", icon: ClipboardList, roles: ["registrar", "supervisor", "admin"] },
+  { id: "details", label: "Application Details", icon: FileCheck2, roles: ["registrar", "supervisor", "admin"] },
+  { id: "tasks", label: "Surveyor Tasks", icon: UsersRound, roles: ["surveyor", "supervisor", "admin"] },
+  { id: "execute", label: "Task Execution", icon: ClipboardList, roles: ["surveyor", "supervisor", "admin"] },
+  { id: "registrar-review", label: "Registrar Review", icon: ShieldCheck, roles: ["registrar", "supervisor", "admin"] },
+  { id: "map", label: "Live Map", icon: Map, roles: ["supervisor", "admin"] },
+  { id: "analytics", label: "Analytics", icon: BarChart3, roles: ["supervisor", "admin"] },
+  { id: "certificate", label: "Certificate View", icon: FileCheck2, roles: ["applicant", "registrar", "supervisor", "admin"] },
+  { id: "admin", label: "Admin Panel", icon: Settings, roles: ["supervisor", "admin"] }
 ];
 
 export default function App() {
-  const [view, setView] = useState("login");
-  const [role, setRole] = useState(localStorage.getItem("lrmisUiRole") || "staff");
+  const [user, setUser] = useState(() => {
+    const raw = localStorage.getItem("lrmisUser");
+    return raw ? JSON.parse(raw) : null;
+  });
+  const [view, setView] = useState(() => landingFor(JSON.parse(localStorage.getItem("lrmisUser") || "null")));
   const [selectedApplication, setSelectedApplication] = useState("LRMIS-2026-0001");
 
+  const visibleNav = useMemo(() => navItems.filter((item) => user && item.roles.includes(user.role)), [user]);
   const title = useMemo(() => navItems.find((item) => item.id === view)?.label || "LRMIS", [view]);
 
-  function chooseRole(next) {
-    setRole(next.id);
-    localStorage.setItem("lrmisUiRole", next.id);
-    localStorage.setItem("lrmisRole", next.apiRole);
-    const landing = {
-      applicant: "applicant-dashboard",
-      staff: "staff-dashboard",
-      surveyor: "tasks",
-      registrar: "registrar-review",
-      manager: "analytics"
-    }[next.id];
-    setView(landing || "staff-dashboard");
+  function handleLogin(nextUser) {
+    setUser(nextUser);
+    setView(landingFor(nextUser));
+  }
+
+  function logout() {
+    localStorage.removeItem("lrmisToken");
+    localStorage.removeItem("lrmisUser");
+    setUser(null);
+    setView("login");
   }
 
   function openApplication(id) {
@@ -69,19 +72,15 @@ export default function App() {
           <strong>LRMIS</strong>
           <span>COMP4382 Land Registration</span>
         </div>
-        <div className="role-switcher">
-          <label>Current role
-            <select value={role} onChange={(event) => chooseRole({ id: event.target.value, apiRole: event.target.value === "registrar" ? "registrar" : event.target.value === "surveyor" ? "surveyor" : "staff" })}>
-              <option value="applicant">Applicant</option>
-              <option value="staff">Staff</option>
-              <option value="surveyor">Surveyor</option>
-              <option value="registrar">Registrar</option>
-              <option value="manager">Manager</option>
-            </select>
-          </label>
-        </div>
+        {user ? (
+          <div className="user-card">
+            <strong>{user.full_name}</strong>
+            <span>{user.role} - {user.actor_id}</span>
+            <button onClick={logout}><LogOut size={16} /> Logout</button>
+          </div>
+        ) : null}
         <nav className="nav">
-          {navItems.map((item) => (
+          {visibleNav.map((item) => (
             <NavButton key={item.id} active={view === item.id} icon={item.icon} label={item.label} onClick={() => setView(item.id)} />
           ))}
         </nav>
@@ -89,23 +88,35 @@ export default function App() {
       <main className="content">
         <div className="topline">
           <h1>{title}</h1>
-          <span>{selectedApplication}</span>
+          <span>{user ? selectedApplication : "Please log in"}</span>
         </div>
-        {view === "login" && <LoginPage onSelect={chooseRole} />}
-        {view === "applicant-dashboard" && <ApplicantDashboard onOpen={openApplication} />}
-        {view === "submit" && <SubmitApplication onCreated={(id) => { setSelectedApplication(id); setView("track"); }} />}
-        {view === "track" && <TrackApplication initialId={selectedApplication} />}
+        {!user && <LoginPage onLogin={handleLogin} />}
+        {user && view === "applicant-dashboard" && <ApplicantDashboard applicantId={user.actor_id} onOpen={openApplication} />}
+        {user && view === "submit" && <SubmitApplication user={user} onCreated={(id) => { setSelectedApplication(id); setView("track"); }} />}
+        {user && view === "track" && <TrackApplication initialId={selectedApplication} user={user} />}
         {view === "staff-dashboard" && <StaffDashboard />}
         {view === "manage" && <ApplicationManagement onOpen={openApplication} />}
-        {view === "details" && <ApplicationDetails applicationId={selectedApplication} />}
-        {view === "tasks" && <TaskList onOpen={openTask} />}
-        {view === "execute" && <TaskExecution applicationId={selectedApplication} />}
-        {view === "registrar-review" && <RegistrarReview />}
+        {user && view === "details" && <ApplicationDetails applicationId={selectedApplication} user={user} />}
+        {user && view === "tasks" && <TaskList user={user} onOpen={openTask} />}
+        {user && view === "execute" && <TaskExecution applicationId={selectedApplication} user={user} />}
+        {user && view === "registrar-review" && <RegistrarReview user={user} />}
         {view === "map" && <LiveMap />}
         {view === "analytics" && <AnalyticsDashboard />}
         {view === "certificate" && <CertificateView />}
+        {view === "admin" && <AdminPanel />}
       </main>
     </div>
   );
+}
+
+function landingFor(user) {
+  if (!user) return "login";
+  return {
+    applicant: "applicant-dashboard",
+    surveyor: "tasks",
+    registrar: "registrar-review",
+    supervisor: "analytics",
+    admin: "admin"
+  }[user.role] || "login";
 }
 

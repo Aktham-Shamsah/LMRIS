@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
 
-from app.core.security import require_staff_role
+from app.core.security import require_supervisor_role
 from app.modules.staff.models import StaffCreate
 from app.modules.staff.service import StaffService
 from app.shared.responses import ok
 
-router = APIRouter(prefix="/staff", tags=["Staff"], dependencies=[Depends(require_staff_role)])
+router = APIRouter(prefix="/staff", tags=["Staff"], dependencies=[Depends(require_supervisor_role)])
 service = StaffService()
 
 

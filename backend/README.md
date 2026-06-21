@@ -15,17 +15,18 @@ uvicorn app.main:app --reload --port 8000
 
 Start MongoDB first, or use the root `docker-compose.yml`.
 
-## Staff Access Stub
+## Demo Authentication
 
-Staff-only endpoints use a simple role header:
+Seed data creates demo users for applicant, surveyor, registrar, supervisor, and admin roles.
+Login with `POST /auth/login`, then send `Authorization: Bearer <token>`.
 
-```text
-X-LRMIS-Role: staff
-X-LRMIS-Role: surveyor
-X-LRMIS-Role: registrar
-```
+The implementation is intentionally small for a university demo: seed-only users, PBKDF2 password hashes, JWT access tokens, and role-based route dependencies.
 
-No complex authentication is included; this matches the project requirement for a simple stub.
+## Notifications
+
+Application workflow changes create notification events and email message records in MongoDB. SMTP delivery is disabled unless `EMAIL_ENABLED=true`.
+
+Use `MAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_USE_TLS`, and `REPLY_TO` in `.env` for real delivery. Keep `.env` private; only `.env.example` should be committed.
 
 ## OpenAPI
 

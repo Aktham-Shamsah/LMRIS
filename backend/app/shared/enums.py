@@ -65,6 +65,6 @@ class SurveyMilestone(StrEnum):
 class StaffRole(StrEnum):
     SURVEYOR = "surveyor"
     REGISTRAR = "registrar"
-    STAFF = "staff"
-    MANAGER = "manager"
+    SUPERVISOR = "supervisor"
+    ADMIN = "admin"
 

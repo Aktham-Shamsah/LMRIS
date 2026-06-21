@@ -1,25 +1,49 @@
-from fastapi import Header, HTTPException, status
+from collections.abc import Callable
+
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+from app.modules.auth.models import CurrentUser
+from app.modules.auth.service import user_from_token
+
+bearer_scheme = HTTPBearer(auto_error=False)
+
+ALL_ROLES = {"applicant", "surveyor", "registrar", "supervisor", "admin"}
+STAFF_ROLES = {"surveyor", "registrar", "supervisor", "admin"}
+REGISTRAR_ROLES = {"registrar", "supervisor", "admin"}
+SUPERVISOR_ROLES = {"supervisor", "admin"}
 
 
-STAFF_ROLES = {"staff", "surveyor", "registrar", "manager", "admin"}
+def get_current_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> CurrentUser:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
+    user = user_from_token(credentials.credentials)
+    request.state.current_user = user
+    return user
 
 
-def require_staff_role(x_lrmss_role: str | None = Header(default=None, alias="X-LRMIS-Role")) -> str:
-    role = (x_lrmss_role or "").strip().lower()
-    if role not in STAFF_ROLES:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Staff-only endpoint. Send X-LRMIS-Role as staff, surveyor, registrar, manager, or admin.",
-        )
-    return role
+def require_roles(*roles: str) -> Callable:
+    allowed = {role.lower() for role in roles}
+
+    def dependency(user: CurrentUser = Depends(get_current_user)) -> CurrentUser:
+        if user.role not in allowed:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=f"Requires one of: {', '.join(sorted(allowed))}.")
+        return user
+
+    return dependency
 
 
-def require_registrar_role(x_lrmss_role: str | None = Header(default=None, alias="X-LRMIS-Role")) -> str:
-    role = (x_lrmss_role or "").strip().lower()
-    if role not in {"registrar", "manager", "admin"}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Registrar endpoint. Send X-LRMIS-Role as registrar, manager, or admin.",
-        )
-    return role
+def require_staff_role(user: CurrentUser = Depends(require_roles(*STAFF_ROLES))) -> CurrentUser:
+    return user
+
+
+def require_registrar_role(user: CurrentUser = Depends(require_roles(*REGISTRAR_ROLES))) -> CurrentUser:
+    return user
+
+
+def require_supervisor_role(user: CurrentUser = Depends(require_roles(*SUPERVISOR_ROLES))) -> CurrentUser:
+    return user
 

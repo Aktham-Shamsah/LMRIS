@@ -10,7 +10,7 @@ class StaffService:
         self.repo = repo or StaffRepository()
 
     def create(self, payload: StaffCreate) -> dict:
-        role_prefix = {"surveyor": "SURV", "registrar": "REG", "staff": "STF", "manager": "MGR"}[payload.role.value]
+        role_prefix = {"surveyor": "SURV", "registrar": "REG", "supervisor": "SUP", "admin": "ADM"}[payload.role.value]
         zone = payload.coverage.zone_ids[0].replace("ZONE-", "").replace("-0", "-") if payload.coverage.zone_ids else "GEN"
         count = self.repo.count_by_role(payload.role.value) + 1
         staff_code = payload.staff_code or f"{role_prefix}-{zone}-{count:02d}"

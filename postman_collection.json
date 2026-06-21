@@ -1,0 +1,405 @@
+{
+  "info": {
+    "name": "Land Registry Web Service",
+    "description": "Complete API collection for the Land Registry Web Service built with FastAPI + MongoDB.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api/v1", "type": "string" },
+    { "key": "app_id", "value": "", "type": "string" },
+    { "key": "attachment_id", "value": "", "type": "string" },
+    { "key": "parcel_id", "value": "", "type": "string" },
+    { "key": "cert_id", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Root Health Check",
+          "request": { "method": "GET", "url": { "raw": "http://localhost:8000/", "host": ["localhost"], "port": "8000", "path": [""] } }
+        },
+        {
+          "name": "API Health Check",
+          "request": { "method": "GET", "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] } }
+        }
+      ]
+    },
+    {
+      "name": "Land Applications",
+      "item": [
+        {
+          "name": "Create Application",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications", "host": ["{{base_url}}"], "path": ["applications"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application_type\": \"first_registration\",\n  \"applicant\": {\n    \"name\": \"Ahmad Khalil\",\n    \"email\": \"ahmad@example.com\",\n    \"phone\": \"+970591234567\",\n    \"national_id\": \"900123456\"\n  },\n  \"parcel_ref\": {\n    \"parcel_number\": \"PN-001\",\n    \"zone_id\": \"ZONE-A\",\n    \"parcel_code\": \"PC-001\"\n  },\n  \"notes\": \"First registration request for agricultural land.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Applications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/applications?page=1&limit=20",
+              "host": ["{{base_url}}"], "path": ["applications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "status", "value": "", "disabled": true },
+                { "key": "application_type", "value": "", "disabled": true },
+                { "key": "zone_id", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Application by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}"] }
+          }
+        },
+        {
+          "name": "Update Application (submitted only)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"notes\": \"Updated notes for the application.\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: submitted → pre_checked",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"pre_checked\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: pre_checked → survey_required",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"survey_required\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: survey_required → surveyed",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"surveyed\",\n  \"performed_by\": \"surveyor@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: surveyed → legal_review",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"legal_review\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: legal_review → under_objection",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"under_objection\",\n  \"reason\": \"Objection filed by neighboring parcel owner.\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: under_objection → legal_review",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"legal_review\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: legal_review → approved",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"approved\",\n  \"performed_by\": \"manager@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: legal_review → rejected",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"rejected\",\n  \"reason\": \"Parcel boundaries overlap with existing registered parcels.\",\n  \"performed_by\": \"manager@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: approved → certificate_issued",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"certificate_issued\",\n  \"performed_by\": \"system\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: certificate_issued → closed",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"closed\",\n  \"performed_by\": \"system\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: pre_checked → missing_documents",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"missing_documents\",\n  \"reason\": \"National ID copy is missing.\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: missing_documents → pre_checked (resume)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"pre_checked\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: legal_review → on_hold",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"on_hold\",\n  \"reason\": \"Waiting on court order regarding ownership dispute.\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Transition: on_hold → legal_review (resume)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/transition", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "transition"] },
+            "body": { "mode": "raw", "raw": "{\n  \"new_status\": \"legal_review\",\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Upload Attachment",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/attachments", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "attachments"] },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "file", "type": "file", "src": "" },
+                { "key": "performed_by", "value": "applicant@example.com", "type": "text" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Attachments",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/attachments", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "attachments"] }
+          }
+        },
+        {
+          "name": "Download Attachment",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/attachments/{{attachment_id}}/download", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "attachments", "{{attachment_id}}", "download"] }
+          }
+        },
+        {
+          "name": "Verify Attachment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/attachments/{{attachment_id}}/verify", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "attachments", "{{attachment_id}}", "verify"] },
+            "body": { "mode": "raw", "raw": "{\n  \"performed_by\": \"reviewer@registry.gov\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Attachment",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}/attachments/{{attachment_id}}?performed_by=reviewer@registry.gov", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}", "attachments", "{{attachment_id}}"], "query": [{ "key": "performed_by", "value": "reviewer@registry.gov" }] }
+          }
+        },
+        {
+          "name": "Delete Application (draft only)",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/applications/{{app_id}}", "host": ["{{base_url}}"], "path": ["applications", "{{app_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Parcels",
+      "item": [
+        {
+          "name": "Create Parcel",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/parcels", "host": ["{{base_url}}"], "path": ["parcels"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"parcel_code\": \"PC-001\",\n  \"parcel_number\": \"PN-001\",\n  \"zone_id\": \"ZONE-A\",\n  \"owner\": {\n    \"name\": \"Ahmad Khalil\",\n    \"national_id\": \"900123456\",\n    \"email\": \"ahmad@example.com\",\n    \"phone\": \"+970591234567\"\n  },\n  \"area\": 2500.0,\n  \"geometry\": {\n    \"type\": \"Polygon\",\n    \"coordinates\": [[\n      [35.2, 31.9],\n      [35.3, 31.9],\n      [35.3, 32.0],\n      [35.2, 32.0],\n      [35.2, 31.9]\n    ]]\n  },\n  \"land_use\": \"agricultural\",\n  \"description\": \"Agricultural land parcel near Ramallah.\",\n  \"status\": \"active\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Parcels",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/parcels?page=1&limit=20",
+              "host": ["{{base_url}}"], "path": ["parcels"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "zone_id", "value": "", "disabled": true },
+                { "key": "status", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Find Nearby Parcels (2dsphere)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/parcels/nearby?longitude=35.25&latitude=31.95&max_distance_meters=10000&limit=20",
+              "host": ["{{base_url}}"], "path": ["parcels", "nearby"],
+              "query": [
+                { "key": "longitude", "value": "35.25" },
+                { "key": "latitude", "value": "31.95" },
+                { "key": "max_distance_meters", "value": "10000" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Find Parcels Within Polygon",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/parcels/within-polygon", "host": ["{{base_url}}"], "path": ["parcels", "within-polygon"] },
+            "body": { "mode": "raw", "raw": "[\n  [\n    [35.2, 31.9],\n    [35.3, 31.9],\n    [35.3, 32.0],\n    [35.2, 32.0],\n    [35.2, 31.9]\n  ]\n]" }
+          }
+        },
+        {
+          "name": "Get Parcel by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/parcels/{{parcel_id}}", "host": ["{{base_url}}"], "path": ["parcels", "{{parcel_id}}"] }
+          }
+        },
+        {
+          "name": "Update Parcel",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/parcels/{{parcel_id}}", "host": ["{{base_url}}"], "path": ["parcels", "{{parcel_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"under_transfer\",\n  \"description\": \"Parcel under ownership transfer process.\"\n}" }
+          }
+        },
+        {
+          "name": "Delete Parcel",
+          "request": {
+            "method": "DELETE",
+            "url": { "raw": "{{base_url}}/parcels/{{parcel_id}}", "host": ["{{base_url}}"], "path": ["parcels", "{{parcel_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Certificates",
+      "item": [
+        {
+          "name": "Generate Certificate",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/certificates", "host": ["{{base_url}}"], "path": ["certificates"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"application_id\": \"APP-20240101-ABCDEF\",\n  \"parcel_code\": \"PC-001\",\n  \"owner_name\": \"Ahmad Khalil\",\n  \"certificate_type\": \"ownership\",\n  \"valid_until\": null,\n  \"performed_by\": \"system\"\n}"
+            }
+          }
+        },
+        {
+          "name": "List Certificates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/certificates?page=1&limit=20",
+              "host": ["{{base_url}}"], "path": ["certificates"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" },
+                { "key": "parcel_code", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Certificate by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/certificates/{{cert_id}}", "host": ["{{base_url}}"], "path": ["certificates", "{{cert_id}}"] }
+          }
+        },
+        {
+          "name": "Revoke Certificate",
+          "request": {
+            "method": "PATCH",
+            "url": { "raw": "{{base_url}}/certificates/{{cert_id}}/revoke", "host": ["{{base_url}}"], "path": ["certificates", "{{cert_id}}", "revoke"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Audit Logs",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/audit-logs?page=1&limit=50",
+              "host": ["{{base_url}}"], "path": ["audit-logs"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" },
+                { "key": "entity_id", "value": "", "disabled": true },
+                { "key": "action", "value": "", "disabled": true }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

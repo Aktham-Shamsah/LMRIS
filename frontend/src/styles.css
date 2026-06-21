@@ -85,9 +85,25 @@ label {
   font-size: 1.35rem;
 }
 
-.role-switcher {
+.user-card {
   display: grid;
   gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+}
+
+.user-card span {
+  color: #c4d0dc;
+  font-size: 0.85rem;
+}
+
+.user-card button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
 }
 
 .nav {
@@ -155,6 +171,18 @@ label {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+}
+
+.inline-form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0;
+}
+
+.inline-form input {
+  min-width: 260px;
+  flex: 1;
 }
 
 .grid {

@@ -8,7 +8,7 @@ import { registrarReview } from "../../api/registrar";
 
 const statuses = ["pre_checked", "survey_required", "surveyed", "legal_review", "approved", "certificate_issued", "closed", "missing_documents", "under_objection"];
 
-export default function ApplicationDetails({ applicationId }) {
+export default function ApplicationDetails({ applicationId, user }) {
   const [application, setApplication] = useState(null);
   const [target, setTarget] = useState("pre_checked");
   const [reason, setReason] = useState("");
@@ -66,14 +66,14 @@ export default function ApplicationDetails({ applicationId }) {
             <label>Reason
               <input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Required for hold/reject/missing/objection" />
             </label>
-            <button onClick={() => run(() => transitionApplication(application.application_id, { target_status: target, reason, performed_by: "staff-ui" }), "Status updated.")}>Transition</button>
+            <button onClick={() => run(() => transitionApplication(application.application_id, { target_status: target, reason, performed_by: user?.actor_id || "staff-ui" }), "Status updated.")}>Transition</button>
             <button onClick={() => run(() => addDocument(application.application_id, { document_type: "ownership_deed", filename: "ownership-deed.pdf", is_ownership_doc: true }), "Ownership document registered.")}>Add Ownership Doc</button>
             <button onClick={() => run(() => autoAssignSurveyor(application.application_id), "Surveyor assigned.")}>Auto Assign</button>
-            <button onClick={() => run(() => registrarReview(application.application_id, { decision: "accept", registrar_id: "REG-RM-01", notes: "Survey report accepted." }), "Moved to legal review.")}>Accept Survey</button>
-            <button onClick={() => run(() => registrarReview(application.application_id, { decision: "approve", registrar_id: "REG-RM-01", notes: "Legal review approved." }), "Approved.")}>Approve</button>
+            <button onClick={() => run(() => registrarReview(application.application_id, { decision: "accept", registrar_id: user?.actor_id || "registrar", notes: "Survey report accepted." }), "Moved to legal review.")}>Accept Survey</button>
+            <button onClick={() => run(() => registrarReview(application.application_id, { decision: "approve", registrar_id: user?.actor_id || "registrar", notes: "Legal review approved." }), "Approved.")}>Approve</button>
             <button onClick={() => run(() => issueCertificate(application.application_id), "Certificate issued.")}>Issue Certificate</button>
-            <button onClick={() => run(() => holdApplication(application.application_id, { reason: reason || "Administrative hold", performed_by: "staff-ui" }), "Placed on hold.")}>Hold</button>
-            <button className="danger" onClick={() => run(() => rejectApplication(application.application_id, { reason: reason || "Rejected by registrar", performed_by: "staff-ui" }), "Rejected.")}>Reject</button>
+            <button onClick={() => run(() => holdApplication(application.application_id, { reason: reason || "Administrative hold", performed_by: user?.actor_id || "staff-ui" }), "Placed on hold.")}>Hold</button>
+            <button className="danger" onClick={() => run(() => rejectApplication(application.application_id, { reason: reason || "Rejected by registrar", performed_by: user?.actor_id || "staff-ui" }), "Rejected.")}>Reject</button>
           </div>
         </div>
       ) : null}
