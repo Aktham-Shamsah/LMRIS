@@ -5,7 +5,7 @@ FastAPI + PyMongo backend for the COMP4382 Land Registration Management Informat
 ## Run Locally
 
 ```powershell
-cd D:\pyML\lrmis\backend
+cd ...\lrmis\backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -39,7 +39,7 @@ http://localhost:8000/openapi.json
 ## Seed Data
 
 ```powershell
-cd D:\pyML\lrmis\backend
+cd ...\lrmis\backend
 python scripts\seed_demo_data.py
 ```
 
