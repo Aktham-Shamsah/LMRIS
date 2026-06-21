@@ -7,6 +7,7 @@ sys.path.insert(0, str(ROOT))
 
 from app.db.indexes import create_indexes  # noqa: E402
 from app.db.mongo import get_db  # noqa: E402
+from app.modules.auth.service import hash_password  # noqa: E402
 
 
 def dt(value: str) -> datetime:
@@ -178,6 +179,80 @@ def seed() -> None:
             "active": True,
             "created_at": dt("2026-01-10T09:30:00Z"),
         },
+        {
+            "staff_id": "SUP-RM-01",
+            "staff_code": "SUP-RM-01",
+            "name": "Supervisor Demo User",
+            "role": "supervisor",
+            "department": "Land Registration Management",
+            "skills": ["workflow_management", "analytics_review", "staff_management"],
+            "coverage": {"zone_ids": ["ZONE-RM-01", "ZONE-RM-02"]},
+            "workload": {"active_tasks": 0, "max_tasks": 50},
+            "contacts": {"phone": "+970599444444", "email": "supervisor@lrmis-demo.ps"},
+            "active": True,
+            "created_at": dt("2026-01-10T10:00:00Z"),
+        },
+        {
+            "staff_id": "ADM-ROOT",
+            "staff_code": "ADM-ROOT",
+            "name": "Admin Demo User",
+            "role": "admin",
+            "department": "System Administration",
+            "skills": ["demo_reset", "audit_review"],
+            "coverage": {"zone_ids": ["ZONE-RM-01", "ZONE-RM-02"]},
+            "workload": {"active_tasks": 0, "max_tasks": 50},
+            "contacts": {"phone": "+970599555555", "email": "admin@lrmis-demo.ps"},
+            "active": True,
+            "created_at": dt("2026-01-10T10:15:00Z"),
+        },
+    ]
+
+    users = [
+        {
+            "email": "applicant@lrmis-demo.ps",
+            "password_hash": hash_password("applicant123"),
+            "full_name": "Nour Ahmad",
+            "role": "applicant",
+            "actor_id": "APP-400000000",
+            "active": True,
+            "created_at": dt("2026-01-10T10:20:00Z"),
+        },
+        {
+            "email": "surveyor@lrmis-demo.ps",
+            "password_hash": hash_password("surveyor123"),
+            "full_name": "Survey Team A",
+            "role": "surveyor",
+            "actor_id": "SURV-RM-04",
+            "active": True,
+            "created_at": dt("2026-01-10T10:21:00Z"),
+        },
+        {
+            "email": "registrar@lrmis-demo.ps",
+            "password_hash": hash_password("registrar123"),
+            "full_name": "Registrar Office Ramallah",
+            "role": "registrar",
+            "actor_id": "REG-RM-01",
+            "active": True,
+            "created_at": dt("2026-01-10T10:22:00Z"),
+        },
+        {
+            "email": "supervisor@lrmis-demo.ps",
+            "password_hash": hash_password("supervisor123"),
+            "full_name": "Supervisor Demo User",
+            "role": "supervisor",
+            "actor_id": "SUP-RM-01",
+            "active": True,
+            "created_at": dt("2026-01-10T10:23:00Z"),
+        },
+        {
+            "email": "admin@lrmis-demo.ps",
+            "password_hash": hash_password("admin123"),
+            "full_name": "Admin Demo User",
+            "role": "admin",
+            "actor_id": "ADM-ROOT",
+            "active": True,
+            "created_at": dt("2026-01-10T10:24:00Z"),
+        },
     ]
 
     documents = [
@@ -206,6 +281,7 @@ def seed() -> None:
         ("parcels", parcels, "parcel_code"),
         ("land_applications", applications, "application_id"),
         ("staff_members", staff_members, "staff_code"),
+        ("users", users, "email"),
         ("application_documents", documents, "document_id"),
         ("survey_tasks", survey_tasks, "task_id"),
         ("survey_reports", survey_reports, "report_id"),

@@ -1,16 +1,23 @@
 .env
+.env.*
+!.env.example
 .venv/
 venv/
 __pycache__/
 *.py[cod]
+*.pyo
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 uploads/
 dist/
 build/
+frontend/dist/
 node_modules/
 .vite/
 coverage/
 *.log
 .DS_Store
+.idea/
+.vscode/
 

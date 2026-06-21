@@ -8,6 +8,7 @@ This repository is aligned with the project PDF requirements and uses:
 - Frontend: React + Vite
 - Map: OpenStreetMap + Leaflet
 - Database: MongoDB
+- Notifications: Mongo outbox fanout with optional SMTP email delivery
 
 ## Required Workflow
 
@@ -32,7 +33,7 @@ assigned -> visit_scheduled -> arrived_on_site -> survey_started -> survey_compl
 ## Run With Docker
 
 ```powershell
-cd D:\pyML\lrmis
+cd C:\Users\ak\Downloads\finalWebService\LMRIS
 docker compose up --build
 ```
 
@@ -51,7 +52,7 @@ docker compose exec backend python scripts/seed_demo_data.py
 ## Run Backend Locally
 
 ```powershell
-cd D:\pyML\lrmis\backend
+cd C:\Users\ak\Downloads\finalWebService\LMRIS\backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -62,20 +63,47 @@ uvicorn app.main:app --reload --port 8000
 ## Run Frontend Locally
 
 ```powershell
-cd D:\pyML\lrmis\frontend
+cd C:\Users\ak\Downloads\finalWebService\LMRIS\frontend
 npm install
 npm run dev
 ```
 
-## Sample Staff Header
+## Demo Login Accounts
 
-Staff-only endpoints use a simple role header:
+Use the login page or `POST /auth/login`.
+
+| Role | Email | Password |
+|---|---|---|
+| applicant | `applicant@lrmis-demo.ps` | `applicant123` |
+| surveyor | `surveyor@lrmis-demo.ps` | `surveyor123` |
+| registrar | `registrar@lrmis-demo.ps` | `registrar123` |
+| supervisor | `supervisor@lrmis-demo.ps` | `supervisor123` |
+| admin | `admin@lrmis-demo.ps` | `admin123` |
+
+Authenticated requests use:
 
 ```text
-X-LRMIS-Role: staff
-X-LRMIS-Role: surveyor
-X-LRMIS-Role: registrar
+Authorization: Bearer <token>
 ```
+
+## Email Notifications
+
+Workflow changes publish notification events and fan out email messages into MongoDB. Real SMTP delivery is off by default. To enable Gmail SMTP locally, set these values in `backend/.env` and do not commit that file:
+
+```env
+EMAIL_ENABLED=true
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your-account@example.com
+SMTP_PASSWORD=your-gmail-app-password
+SMTP_USE_TLS=true
+MAIL_FROM=your-account@example.com
+MAIL_FROM_NAME=LRMIS
+REPLY_TO=your-account@example.com
+EMAIL_REDIRECT_TO=your-account@example.com
+```
+
+The admin panel can send a test email and view notification delivery status.
 
 ## Main Endpoints
 
@@ -115,6 +143,9 @@ Analytics and map:
 - `GET /analytics/registrars`
 - `GET /analytics/geofeeds/parcels`
 - `GET /analytics/geofeeds/pending-heatmap`
+- `GET /admin/notification-events`
+- `GET /admin/notification-messages`
+- `POST /admin/test-email`
 
 ## MongoDB Collections
 
@@ -128,6 +159,10 @@ Analytics and map:
 - `survey_reports`
 - `certificates`
 - `performance_logs`
+- `users`
+- `system_events`
+- `notification_events`
+- `notification_messages`
 
 Indexes are created automatically at FastAPI startup from `backend/app/db/indexes.py`.
 
@@ -177,9 +212,9 @@ After seeding:
 ## Tests
 
 ```powershell
-cd D:\pyML\lrmis\backend
+cd C:\Users\ak\Downloads\finalWebService\LMRIS\backend
 pytest
 ```
 
-The tests cover applicant creation, idempotency, document metadata, workflow guards, survey assignment, survey milestones, registrar review, certificate guard behavior, and analytics responses.
+The tests cover workflow guards, survey assignment, survey milestones, registrar review, JWT authentication, password hashing, and notification fanout.
 

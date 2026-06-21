@@ -3,7 +3,7 @@ import Panel from "../../components/Panel";
 import Message from "../../components/Message";
 import { registrarReview } from "../../api/registrar";
 
-export default function RegistrarReview() {
+export default function RegistrarReview({ user }) {
   const [applicationId, setApplicationId] = useState("LRMIS-2026-0003");
   const [decision, setDecision] = useState("accept");
   const [notes, setNotes] = useState("Registrar review completed.");
@@ -15,7 +15,7 @@ export default function RegistrarReview() {
       setError("");
       const result = await registrarReview(applicationId, {
         decision,
-        registrar_id: "REG-RM-01",
+        registrar_id: user?.actor_id || "registrar",
         notes,
         reason: notes
       });

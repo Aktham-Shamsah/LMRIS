@@ -2,11 +2,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
+from app.core.rate_limit import rate_limit_middleware
 from app.db.indexes import create_indexes
 from app.db.mongo import close_mongo, get_db
+from app.modules.admin.router import router as admin_router
 from app.modules.analytics.router import router as analytics_router
 from app.modules.applicants.router import router as applicants_router
 from app.modules.applications.router import router as applications_router
+from app.modules.auth.router import router as auth_router
 from app.modules.certificates.router import router as certificates_router
 from app.modules.registrar.router import router as registrar_router
 from app.modules.staff.router import router as staff_router
@@ -30,6 +33,7 @@ app.add_middleware(
 )
 
 register_error_handlers(app)
+app.middleware("http")(rate_limit_middleware)
 
 
 @app.on_event("startup")
@@ -48,10 +52,12 @@ def health():
 
 
 app.include_router(applications_router)
+app.include_router(auth_router)
 app.include_router(applicants_router)
 app.include_router(staff_router)
 app.include_router(survey_router)
 app.include_router(registrar_router)
 app.include_router(certificates_router)
 app.include_router(analytics_router)
+app.include_router(admin_router)
 

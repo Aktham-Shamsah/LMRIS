@@ -3,8 +3,8 @@ import Panel from "../../components/Panel";
 import Message from "../../components/Message";
 import { listSurveyTasks } from "../../api/survey";
 
-export default function TaskList({ onOpen }) {
-  const [surveyorId, setSurveyorId] = useState("SURV-RM-04");
+export default function TaskList({ user, onOpen }) {
+  const [surveyorId, setSurveyorId] = useState(user?.actor_id || "SURV-RM-04");
   const [tasks, setTasks] = useState([]);
   const [error, setError] = useState("");
 
@@ -25,7 +25,7 @@ export default function TaskList({ onOpen }) {
     <Panel title="Surveyor Task List" actions={<button onClick={load}>Refresh</button>}>
       <div className="form-grid">
         <label>Surveyor ID
-          <input value={surveyorId} onChange={(event) => setSurveyorId(event.target.value)} />
+          <input value={surveyorId} onChange={(event) => setSurveyorId(event.target.value)} disabled={user?.role === "surveyor"} />
         </label>
       </div>
       <Message error={error} />

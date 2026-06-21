@@ -1,9 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 
+from app.core.security import require_roles
 from app.modules.analytics.service import AnalyticsService
 from app.shared.responses import ok
 
-router = APIRouter(prefix="/analytics", tags=["Analytics"])
+router = APIRouter(prefix="/analytics", tags=["Analytics"], dependencies=[Depends(require_roles("supervisor", "admin"))])
 service = AnalyticsService()
 
 
