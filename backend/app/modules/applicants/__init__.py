@@ -1,0 +1,2 @@
+"""Applicant profile module."""
+

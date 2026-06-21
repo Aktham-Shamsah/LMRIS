@@ -1,0 +1,70 @@
+{
+  "info": {
+    "name": "LRMIS COMP4382",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000" },
+    { "key": "application_id", "value": "LRMIS-2026-0001" },
+    { "key": "applicant_id", "value": "APP-400000000" }
+  ],
+  "item": [
+    {
+      "name": "Create Applicant",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/applicants/",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"full_name\":\"Nour Ahmad\",\"applicant_type\":\"citizen\",\"identity\":{\"national_id\":\"400000000\",\"verified\":true},\"contacts\":{\"email\":\"nour@example.com\",\"phone\":\"+970599000000\"},\"address\":{\"city\":\"Ramallah\",\"zone_id\":\"ZONE-RM-01\"},\"verification_state\":\"verified\"}"
+        }
+      }
+    },
+    {
+      "name": "Create Application",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Idempotency-Key", "value": "demo-idempotency-key" }
+        ],
+        "url": "{{base_url}}/applications/",
+        "body": {
+          "mode": "raw",
+          "raw": "{\"application_type\":\"ownership_transfer\",\"applicant_ref\":{\"applicant_id\":\"APP-400000000\",\"applicant_type\":\"citizen\",\"submitted_by_representative\":false},\"parcel_ref\":{\"parcel_number\":\"145\",\"block_number\":\"12\",\"basin_number\":\"3\",\"zone_id\":\"ZONE-RM-01\",\"geometry\":{\"type\":\"Polygon\",\"coordinates\":[[[35.2001,31.9021],[35.2015,31.9021],[35.2015,31.903],[35.2001,31.903],[35.2001,31.9021]]]}},\"description\":\"Ownership transfer application\"}"
+        }
+      }
+    },
+    {
+      "name": "List Applications",
+      "request": { "method": "GET", "url": "{{base_url}}/applications/" }
+    },
+    {
+      "name": "Transition Application",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "url": "{{base_url}}/applications/{{application_id}}/transition",
+        "body": { "mode": "raw", "raw": "{\"target_status\":\"pre_checked\",\"performed_by\":\"staff-demo\"}" }
+      }
+    },
+    {
+      "name": "Auto Assign Surveyor",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "X-LRMIS-Role", "value": "staff" }],
+        "url": "{{base_url}}/applications/{{application_id}}/auto-assign-surveyor"
+      }
+    },
+    {
+      "name": "Analytics KPIs",
+      "request": { "method": "GET", "url": "{{base_url}}/analytics/kpis" }
+    },
+    {
+      "name": "Parcel GeoJSON",
+      "request": { "method": "GET", "url": "{{base_url}}/analytics/geofeeds/parcels" }
+    }
+  ]
+}
+
