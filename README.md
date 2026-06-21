@@ -33,7 +33,7 @@ assigned -> visit_scheduled -> arrived_on_site -> survey_started -> survey_compl
 ## Run With Docker
 
 ```powershell
-cd C:\Users\ak\Downloads\finalWebService\LMRIS
+cd ../lrmis
 docker compose up --build
 ```
 
@@ -52,7 +52,7 @@ docker compose exec backend python scripts/seed_demo_data.py
 ## Run Backend Locally
 
 ```powershell
-cd C:\Users\ak\Downloads\finalWebService\LMRIS\backend
+cd ..\lrmis\backend
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
@@ -63,7 +63,7 @@ uvicorn app.main:app --reload --port 8000
 ## Run Frontend Locally
 
 ```powershell
-cd C:\Users\ak\Downloads\finalWebService\LMRIS\frontend
+cd ..\lrmis\frontend
 npm install
 npm run dev
 ```
@@ -212,7 +212,7 @@ After seeding:
 ## Tests
 
 ```powershell
-cd C:\Users\ak\Downloads\finalWebService\LMRIS\backend
+cd ..\lrmis\backend
 pytest
 ```
 
