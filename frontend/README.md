@@ -5,7 +5,7 @@ React + Vite frontend for the LRMIS project.
 ## Run
 
 ```powershell
-cd D:\pyML\lrmis\frontend
+cd ...\lrmis\frontend
 npm install
 npm run dev
 ```
