@@ -1,8 +1,9 @@
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 
 from app.modules.audit.service import AuditService
 from app.modules.survey.models import SurveyMilestoneRequest, SurveyReportCreate
 from app.modules.survey.repository import SurveyRepository
+from app.shared.files import save_pdf_upload
 from app.shared.enums import SurveyMilestone
 from app.shared.ids import next_yearly_id, utc_now
 
@@ -144,8 +145,46 @@ class SurveyService:
         self.audit.record(application_id, "status_changed", "system", "survey_workflow", {"from": "survey_required", "to": "surveyed"})
         return saved
 
+    def upload_report_pdf(self, application_id: str, payload: SurveyReportCreate, file: UploadFile) -> dict:
+        task = self.repo.existing_task(application_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Survey task not found.")
+        if task["status"] != SurveyMilestone.SURVEY_COMPLETED.value:
+            raise HTTPException(status_code=409, detail="Survey report can only be uploaded after survey_completed.")
+        now = utc_now()
+        report_id = f"RPT-{task['task_id']}"
+        try:
+            storage_path, size_bytes = save_pdf_upload("survey_reports", application_id, file, report_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        report = payload.model_dump(mode="json")
+        evidence = {
+            "filename": file.filename or f"{report_id}.pdf",
+            "content_type": "application/pdf",
+            "storage_path": storage_path,
+            "size_bytes": size_bytes,
+            "uploaded_at": now,
+        }
+        report.update(
+            {
+                "report_id": report_id,
+                "application_id": application_id,
+                "evidence_files": [*report.get("evidence_files", []), evidence],
+                "uploaded_at": now,
+            }
+        )
+        saved = self.repo.save_report(report)
+        self.repo.update_task_milestone(application_id, {"type": SurveyMilestone.REPORT_UPLOADED.value, "at": now, "by": payload.surveyor_id, "meta": {"report_id": report_id}})
+        self.repo.set_application_status(application_id, "surveyed", now)
+        self.audit.record(application_id, "survey_report_uploaded", "surveyor", payload.surveyor_id, {"report_id": report_id, "filename": evidence["filename"]})
+        self.audit.record(application_id, "status_changed", "system", "survey_workflow", {"from": "survey_required", "to": "surveyed"})
+        return saved
+
     def list_tasks(self, surveyor_id: str | None = None) -> list[dict]:
         return self.repo.tasks(surveyor_id)
+
+    def task(self, application_id: str) -> dict | None:
+        return self.repo.existing_task(application_id)
 
     def _assert_next(self, current: str, requested: str) -> None:
         try:

@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Query, UploadFile, status
+from fastapi.responses import FileResponse
 
 from app.core.security import get_current_user, require_roles
 from app.modules.auth.models import CurrentUser
@@ -12,6 +13,7 @@ from app.modules.applications.models import (
 )
 from app.modules.applications.service import ApplicationService
 from app.shared.pagination import paginated
+from app.shared.files import stored_file_path
 from app.shared.responses import ok
 
 router = APIRouter(prefix="/applications", tags=["Applications"])
@@ -107,13 +109,54 @@ def issue_certificate(
 
 
 @router.post("/{application_id}/documents", status_code=201)
-def add_document(application_id: str, payload: DocumentCreate, user: CurrentUser = Depends(get_current_user)):
+def add_document(application_id: str, payload: DocumentCreate, user: CurrentUser = Depends(require_roles("applicant", "registrar", "supervisor", "admin"))):
     app = service.get(application_id)
     if user.role == "applicant" and app.get("applicant_ref", {}).get("applicant_id") != user.actor_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Applicants can only update their own applications.")
-    if payload.uploaded_by == "applicant":
-        payload.uploaded_by = user.actor_id or user.email
+    payload.uploaded_by = user.actor_id or user.email
     return ok(service.add_document(application_id, payload), "Document metadata added.")
+
+
+@router.post("/{application_id}/documents/upload", status_code=201)
+def upload_document(
+    application_id: str,
+    document_type: str = Form(...),
+    is_ownership_doc: bool = Form(False),
+    notes: str | None = Form(None),
+    file: UploadFile = File(...),
+    user: CurrentUser = Depends(require_roles("applicant", "registrar", "supervisor", "admin")),
+):
+    app = service.get(application_id)
+    if user.role == "applicant" and app.get("applicant_ref", {}).get("applicant_id") != user.actor_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Applicants can only upload documents for their own applications.")
+    return ok(
+        service.upload_document(
+            application_id,
+            document_type=document_type,
+            file=file,
+            uploaded_by=user.actor_id or user.email,
+            is_ownership_doc=is_ownership_doc,
+            notes=notes,
+        ),
+        "PDF document uploaded.",
+    )
+
+
+@router.get("/{application_id}/documents/{document_id}/download")
+def download_document(application_id: str, document_id: str, user: CurrentUser = Depends(get_current_user)):
+    app = service.get(application_id)
+    if user.role == "applicant" and app.get("applicant_ref", {}).get("applicant_id") != user.actor_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Applicants can only download their own documents.")
+    if user.role == "surveyor":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Surveyors cannot download application documents.")
+    document = service.get_document(application_id, document_id)
+    storage_path = document.get("storage_path")
+    if not storage_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document file not found.")
+    path = stored_file_path(storage_path)
+    if not path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document file not found.")
+    return FileResponse(path, media_type="application/pdf", filename=document.get("filename") or f"{document_id}.pdf")
 
 
 @router.post("/{application_id}/comments", status_code=201)

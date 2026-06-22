@@ -10,5 +10,8 @@ export const parcelGeofeed = (params = {}) => {
   const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value));
   return request(`/analytics/geofeeds/parcels?${query.toString()}`);
 };
-export const pendingHeatmap = () => request("/analytics/geofeeds/pending-heatmap");
+export const pendingHeatmap = (params = {}) => {
+  const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value));
+  return request(`/analytics/geofeeds/pending-heatmap?${query.toString()}`);
+};
 

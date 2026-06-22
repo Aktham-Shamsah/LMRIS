@@ -1,7 +1,8 @@
 import pytest
 from fastapi import HTTPException
 
-from app.modules.auth.service import authenticate, create_access_token, hash_password, user_from_token, verify_password
+from app.modules.auth.models import SignupRequest
+from app.modules.auth.service import authenticate, create_access_token, decode_access_token, hash_password, signup, user_from_token, verify_password, verify_signup_otp
 
 
 def seed_user(db, **overrides):
@@ -46,3 +47,30 @@ def test_jwt_round_trip_to_current_user(db):
     assert current.email == "registrar@lrmis-demo.ps"
     assert current.role == "registrar"
     assert current.actor_id == "REG-RM-01"
+
+
+def test_signup_requires_email_otp_and_token_has_role_permissions(db):
+    result = signup(
+        SignupRequest(
+            full_name="New Applicant",
+            email="new@example.com",
+            password="secret123",
+            national_id="555000111",
+            phone="+970599222222",
+            zone_id="ZONE-RM-01",
+        ),
+        db,
+    )
+    assert result["user"]["role"] == "applicant"
+    assert result["user"]["email_verified"] is False
+    with pytest.raises(HTTPException) as exc:
+        authenticate("new@example.com", "secret123", db)
+    assert exc.value.status_code == 403
+
+    message = db.notification_messages.find_one({"to_email": "new@example.com"})
+    code = message["body"].split("verification code is ", 1)[1].split(".", 1)[0]
+    verified = verify_signup_otp("new@example.com", code, db)
+    assert verified["email_verified"] is True
+    token_payload = decode_access_token(create_access_token(verified))
+    assert token_payload["role"] == "applicant"
+    assert "documents:upload" in token_payload["permissions"]

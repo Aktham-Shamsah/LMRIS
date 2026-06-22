@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Panel from "../../components/Panel";
 import Message from "../../components/Message";
-import { getApplicationCertificate, getCertificate } from "../../api/certificates";
+import { downloadCertificatePdf, getApplicationCertificate, getCertificate } from "../../api/certificates";
 
 export default function CertificateView() {
   const [mode, setMode] = useState("certificate");
@@ -13,6 +13,15 @@ export default function CertificateView() {
     try {
       setError("");
       setCertificate(mode === "certificate" ? await getCertificate(id) : await getApplicationCertificate(id));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function openPdf() {
+    try {
+      setError("");
+      await downloadCertificatePdf(certificate.certificate_id);
     } catch (err) {
       setError(err.message);
     }
@@ -34,12 +43,19 @@ export default function CertificateView() {
       </div>
       <Message error={error} />
       {certificate ? (
-        <div className="grid">
-          <div className="metric"><span>Certificate</span><strong>{certificate.certificate_id}</strong></div>
-          <div className="metric"><span>Status</span><strong>{certificate.status}</strong></div>
-          <div className="metric"><span>Application</span><strong>{certificate.application_id}</strong></div>
-          <div className="metric"><span>Issued</span><strong>{certificate.issued_at || "pending"}</strong></div>
-        </div>
+        <>
+          <div className="panel-actions">
+            {certificate.pdf && <button className="primary" onClick={openPdf}>Open Certificate PDF</button>}
+          </div>
+          <div className="grid">
+            <div className="metric"><span>Certificate</span><strong>{certificate.certificate_id}</strong></div>
+            <div className="metric"><span>Status</span><strong>{certificate.status}</strong></div>
+            <div className="metric"><span>Application</span><strong>{certificate.application_id}</strong></div>
+            <div className="metric"><span>Issued</span><strong>{certificate.issued_at || "pending"}</strong></div>
+            <div className="metric"><span>Owner</span><strong>{certificate.issued_to?.full_name || certificate.issued_to?.applicant_id}</strong></div>
+            <div className="metric"><span>Parcel</span><strong>{certificate.certificate_details?.parcel_code || certificate.parcel_ref?.parcel_code}</strong></div>
+          </div>
+        </>
       ) : null}
     </Panel>
   );

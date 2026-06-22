@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     mail_from_name: str = Field(default="LRMIS", alias="MAIL_FROM_NAME")
     reply_to: str | None = Field(default=None, alias="REPLY_TO")
     email_redirect_to: str | None = Field(default=None, alias="EMAIL_REDIRECT_TO")
+    upload_dir: str = Field(default="uploads", alias="UPLOAD_DIR")
+    max_upload_size_mb: int = Field(default=10, alias="MAX_UPLOAD_SIZE_MB")
+    email_otp_minutes: int = Field(default=10, alias="EMAIL_OTP_MINUTES")
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

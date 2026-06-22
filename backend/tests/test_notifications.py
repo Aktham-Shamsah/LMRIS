@@ -14,6 +14,11 @@ class EmailEnabledSettings:
     email_send_immediately = True
 
 
+class EmailDisabledSettings:
+    email_enabled = False
+    email_send_immediately = False
+
+
 def seed_applicant(db):
     db.applicants.insert_one(
         {
@@ -31,7 +36,8 @@ def seed_applicant(db):
     )
 
 
-def test_status_change_queues_email_message(db):
+def test_status_change_queues_email_message(db, monkeypatch):
+    monkeypatch.setattr("app.modules.notifications.service.get_settings", lambda: EmailDisabledSettings())
     seed_applicant(db)
     service = NotificationService(db)
     service.application_status_changed(

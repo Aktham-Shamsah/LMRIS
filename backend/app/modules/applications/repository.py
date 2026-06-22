@@ -100,6 +100,9 @@ class ApplicationRepository:
             "status": document["status"],
             "uploaded_at": document["uploaded_at"],
             "is_ownership_doc": document.get("is_ownership_doc", False),
+            "content_type": document.get("content_type"),
+            "size_bytes": document.get("size_bytes"),
+            "storage_path": document.get("storage_path"),
         }
         self.collection.update_one(
             {"application_id": application_id},
@@ -108,10 +111,17 @@ class ApplicationRepository:
                 "$set": {"timestamps.updated_at": document["uploaded_at"]},
             },
         )
+        self.collection.update_one(
+            {"application_id": application_id, "required_documents.document_type": document["document_type"]},
+            {"$set": {"required_documents.$.status": document["status"], "timestamps.updated_at": document["uploaded_at"]}},
+        )
         return mongo_doc(document)
 
     def get_documents(self, application_id: str) -> list[dict]:
         return [mongo_doc(doc) for doc in self.db.application_documents.find({"application_id": application_id})]
+
+    def get_document(self, application_id: str, document_id: str) -> dict | None:
+        return mongo_doc(self.db.application_documents.find_one({"application_id": application_id, "document_id": document_id}))
 
     def add_comment(self, application_id: str, comment: dict) -> dict:
         self.collection.update_one(

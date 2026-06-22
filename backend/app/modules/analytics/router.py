@@ -39,11 +39,17 @@ def registrars():
 
 
 @router.get("/geofeeds/parcels")
-def geofeed_parcels(zone_id: str | None = None, status: str | None = None, application_type: str | None = None, dispute_state: str | None = None):
-    return ok(service.parcel_geofeed(zone_id, status, application_type, dispute_state))
+def geofeed_parcels(
+    zone_id: str | None = None,
+    status: str | None = None,
+    application_type: str | None = None,
+    dispute_state: str | None = None,
+    applicant_id: str | None = None,
+):
+    return ok(service.parcel_geofeed(zone_id, status, application_type, dispute_state, applicant_id))
 
 
 @router.get("/geofeeds/pending-heatmap")
-def pending_heatmap(longitude: float | None = None, latitude: float | None = None):
-    return ok(service.pending_heatmap(longitude, latitude))
+def pending_heatmap(longitude: float | None = None, latitude: float | None = None, applicant_id: str | None = None):
+    return ok(service.pending_heatmap(longitude, latitude, applicant_id))
 

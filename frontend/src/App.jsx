@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { BarChart3, ClipboardList, FileCheck2, FilePlus2, Home, LogOut, Map, Search, Settings, ShieldCheck, UsersRound } from "lucide-react";
 import NavButton from "./components/NavButton";
 import LoginPage from "./pages/LoginPage";
@@ -29,7 +29,7 @@ const navItems = [
   { id: "map", label: "Live Map", icon: Map, roles: ["supervisor", "admin"] },
   { id: "analytics", label: "Analytics", icon: BarChart3, roles: ["supervisor", "admin"] },
   { id: "certificate", label: "Certificate View", icon: FileCheck2, roles: ["applicant", "registrar", "supervisor", "admin"] },
-  { id: "admin", label: "Admin Panel", icon: Settings, roles: ["supervisor", "admin"] }
+  { id: "admin", label: "Admin Panel", icon: Settings, roles: ["admin"] }
 ];
 
 export default function App() {
@@ -42,6 +42,17 @@ export default function App() {
 
   const visibleNav = useMemo(() => navItems.filter((item) => user && item.roles.includes(user.role)), [user]);
   const title = useMemo(() => navItems.find((item) => item.id === view)?.label || "LRMIS", [view]);
+  const canView = useMemo(() => {
+    if (!user) return view === "login";
+    const item = navItems.find((candidate) => candidate.id === view);
+    return Boolean(item && item.roles.includes(user.role));
+  }, [user, view]);
+
+  useEffect(() => {
+    if (user && !canView) {
+      setView(landingFor(user));
+    }
+  }, [user, canView]);
 
   function handleLogin(nextUser) {
     setUser(nextUser);
@@ -91,19 +102,19 @@ export default function App() {
           <span>{user ? selectedApplication : "Please log in"}</span>
         </div>
         {!user && <LoginPage onLogin={handleLogin} />}
-        {user && view === "applicant-dashboard" && <ApplicantDashboard applicantId={user.actor_id} onOpen={openApplication} />}
-        {user && view === "submit" && <SubmitApplication user={user} onCreated={(id) => { setSelectedApplication(id); setView("track"); }} />}
-        {user && view === "track" && <TrackApplication initialId={selectedApplication} user={user} />}
-        {view === "staff-dashboard" && <StaffDashboard />}
-        {view === "manage" && <ApplicationManagement onOpen={openApplication} />}
-        {user && view === "details" && <ApplicationDetails applicationId={selectedApplication} user={user} />}
-        {user && view === "tasks" && <TaskList user={user} onOpen={openTask} />}
-        {user && view === "execute" && <TaskExecution applicationId={selectedApplication} user={user} />}
-        {user && view === "registrar-review" && <RegistrarReview user={user} />}
-        {view === "map" && <LiveMap />}
-        {view === "analytics" && <AnalyticsDashboard />}
-        {view === "certificate" && <CertificateView />}
-        {view === "admin" && <AdminPanel />}
+        {user && canView && view === "applicant-dashboard" && <ApplicantDashboard applicantId={user.actor_id} onOpen={openApplication} />}
+        {user && canView && view === "submit" && <SubmitApplication user={user} onCreated={(id) => { setSelectedApplication(id); setView("track"); }} />}
+        {user && canView && view === "track" && <TrackApplication initialId={selectedApplication} user={user} />}
+        {user && canView && view === "staff-dashboard" && <StaffDashboard />}
+        {user && canView && view === "manage" && <ApplicationManagement onOpen={openApplication} />}
+        {user && canView && view === "details" && <ApplicationDetails applicationId={selectedApplication} user={user} />}
+        {user && canView && view === "tasks" && <TaskList user={user} onOpen={openTask} />}
+        {user && canView && view === "execute" && <TaskExecution applicationId={selectedApplication} user={user} />}
+        {user && canView && view === "registrar-review" && <RegistrarReview user={user} />}
+        {user && canView && view === "map" && <LiveMap />}
+        {user && canView && view === "analytics" && <AnalyticsDashboard />}
+        {user && canView && view === "certificate" && <CertificateView />}
+        {user && canView && view === "admin" && <AdminPanel />}
       </main>
     </div>
   );
@@ -119,4 +130,3 @@ function landingFor(user) {
     admin: "admin"
   }[user.role] || "login";
 }
-

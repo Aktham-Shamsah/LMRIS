@@ -124,12 +124,20 @@ class AnalyticsService:
             ],
         )
 
-    def parcel_geofeed(self, zone_id: str | None = None, status: str | None = None, application_type: str | None = None, dispute_state: str | None = None) -> dict:
+    def parcel_geofeed(
+        self,
+        zone_id: str | None = None,
+        status: str | None = None,
+        application_type: str | None = None,
+        dispute_state: str | None = None,
+        applicant_id: str | None = None,
+    ) -> dict:
         query = {}
         if zone_id:
             query["zone_id"] = zone_id
         if dispute_state:
             query["dispute_state"] = dispute_state
+        has_application_filters = any([status, application_type, applicant_id])
         features = []
         for parcel in self.repo.parcels(query):
             app_query = {"parcel_ref.parcel_code": parcel.get("parcel_code")}
@@ -137,11 +145,29 @@ class AnalyticsService:
                 app_query["status"] = status
             if application_type:
                 app_query["application_type"] = application_type
-            applications = self.repo.aggregate("land_applications", [{"$match": app_query}, {"$project": {"_id": 0, "application_id": 1, "status": 1, "application_type": 1}}])
+            if applicant_id:
+                app_query["applicant_ref.applicant_id"] = applicant_id
+            applications = self.repo.aggregate(
+                "land_applications",
+                [
+                    {"$match": app_query},
+                    {
+                        "$project": {
+                            "_id": 0,
+                            "application_id": 1,
+                            "status": 1,
+                            "application_type": 1,
+                            "applicant_id": "$applicant_ref.applicant_id",
+                        }
+                    },
+                ],
+            )
+            if has_application_filters and not applications:
+                continue
             features.append(
                 {
                     "type": "Feature",
-                    "geometry": parcel.get("geometry"),
+                    "geometry": normalize_geometry(parcel.get("geometry")),
                     "properties": {
                         "parcel_code": parcel.get("parcel_code"),
                         "zone_id": parcel.get("zone_id"),
@@ -153,7 +179,12 @@ class AnalyticsService:
             )
         return {"type": "FeatureCollection", "features": features}
 
-    def pending_heatmap(self, longitude: float | None = None, latitude: float | None = None) -> dict:
+    def pending_heatmap(self, longitude: float | None = None, latitude: float | None = None, applicant_id: str | None = None) -> dict:
+        application_match = {"applications.status": {"$in": PENDING_STATUSES}}
+        direct_application_match = {"status": {"$in": PENDING_STATUSES}}
+        if applicant_id:
+            application_match["applications.applicant_ref.applicant_id"] = applicant_id
+            direct_application_match["applicant_ref.applicant_id"] = applicant_id
         if longitude is not None and latitude is not None:
             pipeline = [
                 {
@@ -165,17 +196,36 @@ class AnalyticsService:
                 },
                 {"$lookup": {"from": "land_applications", "localField": "parcel_code", "foreignField": "parcel_ref.parcel_code", "as": "applications"}},
                 {"$unwind": "$applications"},
-                {"$match": {"applications.status": {"$in": PENDING_STATUSES}}},
-                {"$project": {"parcel_code": 1, "zone_id": 1, "geometry": 1, "distance_m": 1, "application_id": "$applications.application_id", "status": "$applications.status"}},
+                {"$match": application_match},
+                {
+                    "$project": {
+                        "parcel_code": 1,
+                        "zone_id": 1,
+                        "geometry": 1,
+                        "distance_m": 1,
+                        "application_id": "$applications.application_id",
+                        "status": "$applications.status",
+                        "applicant_id": "$applications.applicant_ref.applicant_id",
+                    }
+                },
                 {"$sort": {"distance_m": 1}},
             ]
             docs = self.repo.aggregate("parcels", pipeline)
         else:
             pipeline = [
-                {"$match": {"status": {"$in": PENDING_STATUSES}}},
+                {"$match": direct_application_match},
                 {"$lookup": {"from": "parcels", "localField": "parcel_ref.parcel_code", "foreignField": "parcel_code", "as": "parcel"}},
                 {"$unwind": "$parcel"},
-                {"$project": {"application_id": 1, "status": 1, "zone_id": "$parcel.zone_id", "geometry": "$parcel.geometry", "parcel_code": "$parcel.parcel_code"}},
+                {
+                    "$project": {
+                        "application_id": 1,
+                        "status": 1,
+                        "applicant_id": "$applicant_ref.applicant_id",
+                        "zone_id": "$parcel.zone_id",
+                        "geometry": "$parcel.geometry",
+                        "parcel_code": "$parcel.parcel_code",
+                    }
+                },
                 {"$sort": {"zone_id": 1}},
             ]
             docs = self.repo.aggregate("land_applications", pipeline)
@@ -184,9 +234,30 @@ class AnalyticsService:
             "features": [
                 {
                     "type": "Feature",
-                    "geometry": doc.get("geometry"),
+                    "geometry": normalize_geometry(doc.get("geometry")),
                     "properties": {key: value for key, value in doc.items() if key not in {"geometry", "_id"}},
                 }
                 for doc in docs
             ],
         }
+
+
+def normalize_geometry(geometry: dict | None) -> dict | None:
+    if not isinstance(geometry, dict):
+        return geometry
+    normalized = dict(geometry)
+    normalized["coordinates"] = normalize_coordinates(normalized.get("coordinates"))
+    return normalized
+
+
+def normalize_coordinates(value):
+    if isinstance(value, str):
+        parts = value.replace(",", " ").split()
+        if len(parts) == 2:
+            return [float(parts[0]), float(parts[1])]
+        return value
+    if isinstance(value, list):
+        if len(value) == 2 and all(not isinstance(item, (list, dict)) for item in value):
+            return [float(value[0]), float(value[1])]
+        return [normalize_coordinates(item) for item in value]
+    return value

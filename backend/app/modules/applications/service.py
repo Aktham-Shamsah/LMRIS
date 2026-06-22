@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from fastapi import HTTPException, status
+from fastapi import HTTPException, UploadFile, status
 
 from app.modules.applicants.repository import ApplicantRepository
 from app.modules.applications.models import (
@@ -17,7 +17,9 @@ from app.modules.applications.models import (
 )
 from app.modules.applications.repository import ApplicationRepository
 from app.modules.audit.service import AuditService
+from app.modules.certificates.pdf import generate_certificate_pdf
 from app.modules.notifications.service import NotificationService
+from app.shared.files import save_pdf_upload
 from app.shared.enums import ApplicationType
 from app.shared.ids import next_yearly_id, utc_now
 
@@ -200,20 +202,44 @@ class ApplicationService:
             raise HTTPException(status_code=409, detail="Cannot issue certificate unless application is approved.")
         now = utc_now()
         certificate_id = next_yearly_id(self.repo.db, "certificates", "certificate_id", "CERT")
+        applicant = self.repo.db.applicants.find_one({"applicant_id": app["applicant_ref"]["applicant_id"]}) or {}
+        parcel_ref = app.get("parcel_ref") or {}
         cert = {
             "certificate_id": certificate_id,
             "application_id": app["application_id"],
-            "parcel_id": app.get("parcel_ref", {}).get("parcel_id"),
-            "parcel_ref": app.get("parcel_ref"),
+            "parcel_id": parcel_ref.get("parcel_id"),
+            "parcel_ref": parcel_ref,
             "certificate_type": "ownership_certificate",
             "status": "issued",
-            "issued_to": {"applicant_id": app["applicant_ref"]["applicant_id"]},
+            "issued_to": {
+                "applicant_id": app["applicant_ref"]["applicant_id"],
+                "full_name": applicant.get("full_name"),
+                "email": applicant.get("contacts", {}).get("email"),
+            },
             "issued_at": now,
             "issued_by": performed_by,
+            "certificate_details": {
+                "owner_name": applicant.get("full_name"),
+                "application_type": app.get("application_type"),
+                "parcel_code": parcel_ref.get("parcel_code"),
+                "parcel_number": parcel_ref.get("parcel_number"),
+                "block_number": parcel_ref.get("block_number"),
+                "basin_number": parcel_ref.get("basin_number"),
+                "zone_id": parcel_ref.get("zone_id"),
+                "basis": f"Approved LRMIS workflow for application {app['application_id']}",
+            },
             "verification": {
                 "qr_code_url": f"/certificates/{certificate_id}/verify",
                 "digital_signature_stub": f"signed-{certificate_id.lower()}",
             },
+        }
+        pdf_path, pdf_size = generate_certificate_pdf(cert)
+        cert["pdf"] = {
+            "filename": f"{certificate_id}.pdf",
+            "content_type": "application/pdf",
+            "storage_path": pdf_path,
+            "size_bytes": pdf_size,
+            "generated_at": now,
         }
         saved = self.repo.save_certificate(cert)
         self._apply_status(app, "certificate_issued", None, performed_by)
@@ -236,6 +262,51 @@ class ApplicationService:
         saved = self.repo.add_document(app["application_id"], document)
         self.audit.record(app["application_id"], "document_uploaded", "applicant", payload.uploaded_by, {"document_type": payload.document_type})
         return saved
+
+    def upload_document(
+        self,
+        application_id: str,
+        *,
+        document_type: str,
+        file: UploadFile,
+        uploaded_by: str,
+        is_ownership_doc: bool = False,
+        notes: str | None = None,
+    ) -> dict:
+        app = self.get(application_id)
+        now = utc_now()
+        document_id = uuid.uuid4().hex
+        try:
+            storage_path, size_bytes = save_pdf_upload("applications", app["application_id"], file, document_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+        document = {
+            "document_id": document_id,
+            "application_id": app["application_id"],
+            "document_type": document_type,
+            "filename": file.filename or f"{document_id}.pdf",
+            "content_type": "application/pdf",
+            "storage_path": storage_path,
+            "storage_url": f"/applications/{app['application_id']}/documents/{document_id}/download",
+            "size_bytes": size_bytes,
+            "status": "uploaded",
+            "uploaded_by": uploaded_by,
+            "uploaded_at": now,
+            "reviewed_at": None,
+            "reviewed_by": None,
+            "is_ownership_doc": is_ownership_doc,
+            "notes": notes,
+        }
+        saved = self.repo.add_document(app["application_id"], document)
+        self.audit.record(app["application_id"], "document_uploaded", "applicant", uploaded_by, {"document_type": document_type, "filename": document["filename"]})
+        return saved
+
+    def get_document(self, application_id: str, document_id: str) -> dict:
+        app = self.get(application_id)
+        doc = self.repo.get_document(app["application_id"], document_id)
+        if not doc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Document not found.")
+        return doc
 
     def add_comment(self, application_id: str, payload: CommentCreate) -> dict:
         app = self.get(application_id)

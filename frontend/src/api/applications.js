@@ -29,6 +29,15 @@ export const issueCertificate = (applicationId) =>
 export const addDocument = (applicationId, payload) =>
   request(`/applications/${applicationId}/documents`, { method: "POST", body: payload });
 
+export const uploadDocumentPdf = (applicationId, { file, documentType, isOwnershipDoc = false, notes = "" }) => {
+  const body = new FormData();
+  body.append("file", file);
+  body.append("document_type", documentType);
+  body.append("is_ownership_doc", String(isOwnershipDoc));
+  if (notes) body.append("notes", notes);
+  return request(`/applications/${applicationId}/documents/upload`, { method: "POST", body });
+};
+
 export const addComment = (applicationId, payload) =>
   request(`/applications/${applicationId}/comments`, { method: "POST", body: payload });
 

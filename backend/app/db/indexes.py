@@ -16,6 +16,9 @@ def create_indexes(db) -> None:
     db.applicants.create_index("identity.national_id", unique=True)
     db.users.create_index("email", unique=True)
     db.users.create_index("role")
+    db.users.create_index("email_verified")
+    db.email_verifications.create_index("verification_id", unique=True)
+    db.email_verifications.create_index([("email", ASCENDING), ("purpose", ASCENDING), ("created_at", ASCENDING)])
     db.system_events.create_index("timestamp")
     db.system_events.create_index("event_type")
     db.system_events.create_index("actor.email")
@@ -29,6 +32,7 @@ def create_indexes(db) -> None:
     db.staff_members.create_index("staff_code", unique=True)
     db.survey_tasks.create_index("application_id")
     db.certificates.create_index("certificate_id", unique=True)
+    db.certificates.create_index("application_id")
 
     db.land_applications.create_index("idempotency_key", unique=True, sparse=True)
     db.land_applications.create_index([("status", ASCENDING), ("parcel_ref.zone_id", ASCENDING)])
